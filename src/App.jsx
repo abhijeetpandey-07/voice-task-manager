@@ -1,12 +1,7 @@
 import { useState } from 'react'
 import useSpeech from './hooks/useSpeech'
 import { extractTasks } from './api'
-
-const COLUMNS = [
-  { id: 'todo', title: 'To Do' },
-  { id: 'inprogress', title: 'In Progress' },
-  { id: 'done', title: 'Done' },
-]
+import Board from './components/Board'
 
 export default function App() {
   const { transcript, setTranscript, listening, toggle, error: micError } = useSpeech()
@@ -29,6 +24,23 @@ export default function App() {
       setLoading(false)
     }
   }
+
+  const moveTask = (id, status, index) => {
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === id)
+      const rest = prev.filter((t) => t.id !== id)
+      const moved = { ...task, status }
+      const target = rest.filter((t) => t.status === status)[index]
+      if (!target) return [...rest, moved]
+      const pos = rest.indexOf(target)
+      return [...rest.slice(0, pos), moved, ...rest.slice(pos)]
+    })
+  }
+
+  const updateTask = (id, changes) =>
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...changes } : t)))
+
+  const deleteTask = (id) => setTasks((prev) => prev.filter((t) => t.id !== id))
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -70,24 +82,8 @@ export default function App() {
           </button>
         </section>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-3">
-          {COLUMNS.map((col) => {
-            const list = tasks.filter((t) => t.status === col.id)
-            return (
-              <div key={col.id} className="rounded-2xl bg-slate-900 p-4">
-                <h2 className="mb-3 font-semibold">{col.title}</h2>
-                {list.length === 0 && <p className="text-sm text-slate-500">No tasks yet</p>}
-                {list.map((t) => (
-                  <div key={t.id} className="mb-2 rounded-lg bg-slate-800 p-3">
-                    <p className="font-medium">{t.title}</p>
-                    <p className="text-xs text-slate-400">
-                      {t.priority} · {t.dueDate || 'no date'}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )
-          })}
+        <section className="mt-6">
+          <Board tasks={tasks} onMove={moveTask} onUpdate={updateTask} onDelete={deleteTask} />
         </section>
       </main>
     </div>
