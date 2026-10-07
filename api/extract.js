@@ -1,3 +1,48 @@
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+const RETRY_STATUS = [429, 500, 503, 504]
+
+async function callGemini({ key, models, system, transcript }) {
+  let lastError = 'Gemini is busy. Please try again.'
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const model = models[attempt % models.length]
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: 'POST',
+          signal: AbortSignal.timeout(40000),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key,
+          },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: system }] },
+            contents: [{ role: 'user', parts: [{ text: transcript }] }],
+            generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+          }),
+        },
+      )
+
+      if (r.ok) {
+        const data = await r.json()
+        return data.candidates?.[0]?.content?.parts?.[0]?.text
+      }
+
+      const body = await r.json().catch(() => ({}))
+      lastError = `Gemini error ${r.status}: ${body?.error?.message || 'unknown error'}`
+      console.error(lastError, `(model: ${model}, attempt ${attempt + 1})`)
+      if (!RETRY_STATUS.includes(r.status)) break
+    } catch (e) {
+      lastError = 'Gemini did not respond in time.'
+      console.error(lastError, `(model: ${model}, attempt ${attempt + 1})`)
+    }
+    await sleep(1500 * (attempt + 1))
+  }
+
+  throw new Error(lastError)
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -27,31 +72,12 @@ Rules:
   try {
     let text
 
-        if (geminiKey) {
-      const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash'
-      const r = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': geminiKey,
-          },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: system }] },
-            contents: [{ role: 'user', parts: [{ text: transcript }] }],
-            generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
-          }),
-        },
-      )
-      if (!r.ok) {
-        const body = await r.json().catch(() => ({}))
-        const reason = body?.error?.message || 'unknown error'
-        console.error('Gemini error:', r.status, reason)
-        return res.status(502).json({ error: `Gemini error ${r.status}: ${reason}` })
-      }
-      const data = await r.json()
-      text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (geminiKey) {
+      const models = [
+        process.env.GEMINI_MODEL || 'gemini-3.8-flash',
+        process.env.GEMINI_FALLBACK_MODEL,
+      ].filter(Boolean)
+      text = await callGemini({ key: geminiKey, models, system, transcript })
     } else {
       const r = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -85,6 +111,8 @@ Rules:
     }))
     return res.status(200).json({ tasks })
   } catch (err) {
-    return res.status(500).json({ error: 'Could not extract tasks' })
+    return res.status(502).json({
+      error: err.message || 'Could not extract tasks. Please try again.',
+    })
   }
 }
