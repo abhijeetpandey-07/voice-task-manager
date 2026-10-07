@@ -2,6 +2,7 @@ import { useState } from 'react'
 import useSpeech from './hooks/useSpeech'
 import { extractTasks } from './api'
 import Board from './components/Board'
+import { downloadICS } from './utils/ics'
 
 export default function App() {
   const { transcript, setTranscript, listening, toggle, error: micError } = useSpeech()
@@ -41,6 +42,8 @@ export default function App() {
     setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...changes } : t)))
 
   const deleteTask = (id) => setTasks((prev) => prev.filter((t) => t.id !== id))
+
+  const exportable = tasks.filter((t) => t.dueDate && t.status !== 'done')
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -83,6 +86,16 @@ export default function App() {
         </section>
 
         <section className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Your board</h2>
+            <button
+              onClick={() => downloadICS(exportable)}
+              disabled={exportable.length === 0}
+              className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 disabled:opacity-40"
+            >
+              📅 Export to calendar
+            </button>
+          </div>
           <Board tasks={tasks} onMove={moveTask} onUpdate={updateTask} onDelete={deleteTask} />
         </section>
       </main>
