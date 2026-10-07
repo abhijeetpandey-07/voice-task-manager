@@ -4,7 +4,7 @@
 
 Built for Cyrus Hack-A-Thon 2026 (Problem Statement 05, Productivity & Assistive Tech) by Team Cosmic Strike.
 
-**Live demo:** https://your-live-link.vercel.app
+**Live demo:** https://voice-task-manager-ebon.vercel.app/
 
 ## The problem
 Voice notes are fast, but organizing them is not. Ideas, deadlines and to-dos pile up in one long ramble, and nothing tells you what is urgent or when it is due.
