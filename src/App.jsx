@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import useSpeech from './hooks/useSpeech'
 
 export default function App() {
-  const [transcript, setTranscript] = useState('')
-  const [listening, setListening] = useState(false)
+  const { transcript, setTranscript, listening, toggle, error } = useSpeech()
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -18,18 +17,17 @@ export default function App() {
       <main className="mx-auto max-w-5xl p-6">
         <section className="flex flex-col items-center gap-4 rounded-2xl bg-slate-900 p-8">
           <button
-            onClick={() => setListening(!listening)}
+            onClick={toggle}
             className={`h-20 w-20 rounded-full text-3xl transition ${
-              listening
-                ? 'animate-pulse bg-red-500'
-                : 'bg-indigo-500 hover:bg-indigo-400'
+              listening ? 'animate-pulse bg-red-500' : 'bg-indigo-500 hover:bg-indigo-400'
             }`}
           >
             🎤
           </button>
           <p className="text-sm text-slate-400">
-            {listening ? 'Listening...' : 'Tap the mic and talk through your day'}
+            {listening ? 'Listening... tap again to stop' : 'Tap the mic and talk through your day'}
           </p>
+          {error && <p className="text-sm text-red-400">{error}</p>}
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
