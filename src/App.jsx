@@ -4,6 +4,8 @@ import { extractTasks } from './api'
 import Board from './components/Board'
 import { downloadICS } from './utils/ics'
 
+const SAMPLE =
+  "Tomorrow I need to send the project report to Rahul, it's urgent. Also call the dentist on Friday to book an appointment. Maybe plan the weekend trip sometime next week, and buy groceries tonight."
 export default function App() {
   const { transcript, setTranscript, listening, toggle, error: micError } = useSpeech()
     const [tasks, setTasks] = useState(() => {
@@ -84,6 +86,12 @@ export default function App() {
             {listening ? 'Listening... tap again to stop' : 'Tap the mic and talk through your day'}
           </p>
           {(micError || error) && <p className="text-sm text-red-400">{micError || error}</p>}
+                    <button
+            onClick={() => setTranscript(SAMPLE)}
+            className="text-xs text-slate-500 underline hover:text-slate-300"
+          >
+            Use a sample note
+          </button>
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
