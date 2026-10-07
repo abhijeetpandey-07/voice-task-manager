@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import useSpeech from './hooks/useSpeech'
 import { extractTasks } from './api'
 import Board from './components/Board'
@@ -6,7 +6,21 @@ import { downloadICS } from './utils/ics'
 
 export default function App() {
   const { transcript, setTranscript, listening, toggle, error: micError } = useSpeech()
-  const [tasks, setTasks] = useState([])
+    const [tasks, setTasks] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('voicetask-tasks')) || []
+    } catch {
+      return []
+    }
+  })
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('voicetask-tasks', JSON.stringify(tasks))
+    } catch {
+      // ignore storage errors
+    }
+  }, [tasks])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
